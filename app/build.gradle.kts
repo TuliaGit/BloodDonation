@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose.android)
     implementation(libs.kotlinx.collections.immutable)
+    implementation(libs.androidx.core.splashscreen)
 
     // Jetpack Compose
     implementation(platform(libs.compose.bom))

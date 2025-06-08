@@ -19,9 +19,9 @@
         android:theme="@style/Theme.MainActivity"
         tools:targetApi="31">
         <activity
-            android:name="com.example.blooddonation.ui.MainActivity"
+            android:name="com.example.blooddonation.feature.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.MainActivity">
+            android:theme="@style/Theme.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
