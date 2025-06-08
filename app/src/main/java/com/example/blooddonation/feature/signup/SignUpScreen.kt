@@ -51,9 +51,9 @@ fun SignUpScreen(
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var selectedRole by rememberSaveable { mutableStateOf("") }
-    var roleExpanded by remember { mutableStateOf(false) }
+    var roleExpanded by rememberSaveable { mutableStateOf(false) }
 
-    val roles = listOf("Donor", "Receiver", "Admin")
+    val roles = listOf("User", "Admin")
 
     val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()

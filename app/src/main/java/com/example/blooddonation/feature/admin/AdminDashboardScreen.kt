@@ -1,94 +1,90 @@
 package com.example.blooddonation.feature.admin
 
+import android.app.DatePickerDialog
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import android.app.Activity
-import android.app.DatePickerDialog
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.LaunchedEffect
-
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-
-import com.google.firebase.auth.FirebaseAuth
 import coil.compose.rememberAsyncImagePainter
+import com.example.blooddonation.R
 import com.example.blooddonation.domain.AdminBloodCamp
+import com.example.blooddonation.feature.events.CampCard
 import com.example.blooddonation.feature.theme.ThemeSwitch
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import com.example.blooddonation.R
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-
-// Removed color aliases; use theme colors directly
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboardScreen(
-    onBack: () -> Unit,
+    onAboutUs: () -> Unit,
+    onOurWork: () -> Unit,
+    onHelp: () -> Unit,
     onLogout: () -> Unit,
     viewModel: AdminViewModel = viewModel()
 ) {
@@ -98,229 +94,245 @@ fun AdminDashboardScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
     var selectedCamp by remember { mutableStateOf<AdminBloodCamp?>(null) }
-    val context = LocalContext.current
 
     val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    // Filter logic for both name and location
-    val shownCamps = camps
-        .filter {
-            it.name.contains(searchQuery, ignoreCase = true) ||
-                    it.location.contains(searchQuery, ignoreCase = true)
-        }
+    val shownCamps = camps.filter {
+        it.name.contains(searchQuery, ignoreCase = true) ||
+                it.location.contains(searchQuery, ignoreCase = true)
+    }
         .let { list ->
             if (sortAsc) list.sortedBy { it.date } else list.sortedByDescending { it.date }
         }
 
-    // Scroll to top when sortAsc or searchQuery changes
     LaunchedEffect(sortAsc, searchQuery) {
         if (shownCamps.isNotEmpty()) {
             listState.animateScrollToItem(0)
         }
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Admin Dashboard") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "CrimsonSync",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(16.dp)
+                )
+                HorizontalDivider()
+                NavigationDrawerItem(
+                    label = { Text("About Us") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onAboutUs()
+                    }
+                )
+                NavigationDrawerItem(
+                    label = { Text("Our Work") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onOurWork()
+                    }
+                )
+                NavigationDrawerItem(
+                    label = { Text("Help") },
+                    selected = false,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onHelp()
+                    }
+                )
+                NavigationDrawerItem(
+                    label = { Text("Logout") },
+                    selected = false,
+                    onClick = {
+                        showLogoutDialog = true
+                        scope.launch { drawerState.close() }
+                    }
+                )
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            "Admin Dashboard",
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(
+                                Icons.Default.Menu,
+                                contentDescription = "Menu",
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    },
+                    actions = {
+                        ThemeSwitch()
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary)
+                )
+            },
+            floatingActionButton = {
+                FloatingActionButton(onClick = {
+                    selectedCamp = null
+                    showDialog = true
+                }) { Icon(Icons.Default.Add, contentDescription = "Add Camp") }
+            }
+        ) { padding ->
+            Column(modifier = Modifier.padding(padding)) {
+                // Search and Sort Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search by camp or location") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    IconButton(onClick = {
+                        sortAsc = !sortAsc
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Sort by date"
+                        )
+                    }
+                }
+
+                // Camp List
+                LazyColumn(state = listState) {
+                    items(shownCamps, key = { it.id }) { camp ->
+                        CampCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            name = camp.name,
+                            location = camp.location,
+                            date = camp.date,
+                            description = camp.description,
+                            imagePath = camp.imageUrl
+                        ) {
+                            Button(
+                                onClick = {
+                                    selectedCamp = camp
+                                    showDialog = true
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Text("Edit", color = MaterialTheme.colorScheme.onPrimary)
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = { viewModel.deleteCamp(camp.id) },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground)
+                            ) {
+                                Text("Delete", color = MaterialTheme.colorScheme.onPrimary)
+                            }
+                        }
+                    }
+
+                    if (shownCamps.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No camps found for “$searchQuery”",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Add/Edit Camp Dialog
+        if (showDialog) {
+            CampDialog(
+                initialCamp = selectedCamp,
+                onDismiss = { showDialog = false },
+                onSave = { camp ->
+                    if (camp.id.isEmpty()) viewModel.addCamp(camp)
+                    else viewModel.updateCamp(camp)
+                    showDialog = false
+                }
+            )
+        }
+
+        // Logout Confirmation Dialog
+        if (showLogoutDialog) {
+            AlertDialog(
+                onDismissRequest = { showLogoutDialog = false },
+                title = {
+                    Text(
+                        "Confirm Logout",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        "Are you sure you want to logout?",
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            FirebaseAuth.getInstance().signOut()
+                            onLogout()
+                            showLogoutDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("Logout", color = MaterialTheme.colorScheme.onPrimary)
                     }
                 },
-                actions = {
-                    ThemeSwitch()
-                    IconButton(onClick = { showLogoutDialog = true }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_logout),
-                            contentDescription = "Logout"
-                        )
+                dismissButton = {
+                    Button(
+                        onClick = { showLogoutDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground)
+                    ) {
+                        Text("Cancel", color = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                selectedCamp = null
-                showDialog = true
-            }) { Icon(Icons.Default.Add, contentDescription = "Add Camp") }
         }
-    ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
-            // Search and Sort Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                TextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search by camp or location") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
-                Spacer(Modifier.width(8.dp))
-                IconButton(onClick = {
-                    sortAsc = !sortAsc
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Sort by date"
-                    )
-                }
-            }
-
-            // Camp List
-            LazyColumn(state = listState) {
-                items(shownCamps, key = { it.id }) { camp ->
-                    CampItem(
-                        camp = camp,
-                        onEdit = {
-                            selectedCamp = it
-                            showDialog = true
-                        },
-                        onDelete = { viewModel.deleteCamp(it.id) }
-                    )
-                }
-
-                if (shownCamps.isEmpty()) {
-                    item {
-                        Text(
-                            text = "No camps found for “$searchQuery”",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    // Add/Edit Camp Dialog
-    if (showDialog) {
-        CampDialog(
-            initialCamp = selectedCamp,
-            onDismiss = { showDialog = false },
-            onSave = { camp ->
-                if (camp.id.isEmpty()) viewModel.addCamp(camp)
-                else viewModel.updateCamp(camp)
-                showDialog = false
-            }
-        )
-    }
-
-    // Logout Confirmation Dialog
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Confirm Logout", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold) },
-            text = { Text("Are you sure you want to logout?", color = MaterialTheme.colorScheme.onBackground) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        FirebaseAuth.getInstance().signOut()
-                        onLogout()
-                        showLogoutDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Logout", color = MaterialTheme.colorScheme.onPrimary)
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showLogoutDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground)
-                ) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onPrimary)
-                }
-            }
-        )
     }
 }
 
-
-@Composable
-fun CampItem(
-    camp: AdminBloodCamp,
-    onEdit: (AdminBloodCamp) -> Unit,
-    onDelete: (AdminBloodCamp) -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.onPrimary),
-        elevation = CardDefaults.cardElevation()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-        ) {
-            Row(
-                modifier = Modifier,
-                verticalAlignment = Alignment.Top
-            ) {
-                // Image on the left as a rounded image
-                if (camp.imageUrl.isNotEmpty()) {
-                    val imageFile = rememberSaveable { File(camp.imageUrl) }
-                    if (imageFile.exists()) {
-                        Image(
-                            painter = rememberAsyncImagePainter(imageFile),
-                            contentScale = ContentScale.Crop,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(CircleShape)
-                        )
-                    }
-                } else {
-                    // Placeholder (optional)
-                    Icon(
-                        imageVector = Icons.Default.AccountCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(CircleShape)
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                // Details and buttons
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = camp.name,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(text = "Location: ${camp.location}", color = MaterialTheme.colorScheme.onBackground)
-                    Text(text = "Date: ${camp.date}", color = MaterialTheme.colorScheme.onBackground)
-                    Text(text = camp.description, color = MaterialTheme.colorScheme.onBackground, maxLines = 2)
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row {
-                Button(
-                    onClick = { onEdit(camp) },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Edit", color = MaterialTheme.colorScheme.onPrimary)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    onClick = { onDelete(camp) },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onBackground)
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.onPrimary)
-                }
-            }
+suspend fun saveImageToInternalStorage(context: Context, uri: Uri): String? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val fileName = "camp_image_${System.currentTimeMillis()}.jpg"
+            val file = File(context.filesDir, fileName)
+            val outputStream = FileOutputStream(file)
+            inputStream?.copyTo(outputStream)
+            inputStream?.close()
+            outputStream.close()
+            file.absolutePath
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }
@@ -609,23 +621,3 @@ fun CampDialog(
         }
     )
 }
-
-suspend fun saveImageToInternalStorage(context: Context, uri: Uri): String? {
-    return withContext(Dispatchers.IO) {
-        try {
-            val inputStream = context.contentResolver.openInputStream(uri)
-            val fileName = "camp_image_${System.currentTimeMillis()}.jpg"
-            val file = File(context.filesDir, fileName)
-            val outputStream = FileOutputStream(file)
-            inputStream?.copyTo(outputStream)
-            inputStream?.close()
-            outputStream.close()
-            file.absolutePath
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
-}
-
-

@@ -1,6 +1,7 @@
 package com.example.blooddonation.feature
 
 import android.util.Log
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
@@ -10,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.navigation.compose.rememberNavController
 import com.example.blooddonation.navigation.AppNavigation
+import com.example.blooddonation.navigation.Screen
 import com.example.blooddonation.feature.theme.BloodBankTheme
 import com.example.blooddonation.feature.theme.LocalIsDarkTheme
 import com.example.blooddonation.feature.theme.LocalToggleTheme
@@ -33,7 +35,9 @@ fun BloodBankApp(currentUser: FirebaseUser?) {
                     // Logging the values before navigation
                     Log.d("BloodBankApp", "Navigating to dashboard with name: $name, imageUri: $imageUri")
                     if (name.isNotEmpty() && imageUri.isNotEmpty()) {
-                        navController.navigate("dashboard/$name/$imageUri")
+                        val uid = currentUser.uid
+                        val encodedUri = Uri.encode(imageUri)
+                        navController.navigate(Screen.Dashboard.createRoute(name, encodedUri, uid))
                     } else {
                         Log.e("BloodBankApp", "Navigation arguments are invalid: name='$name', imageUri='$imageUri'")
                     }

@@ -1,11 +1,20 @@
 package com.example.blooddonation.feature
 
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.messaging.FirebaseMessaging
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
@@ -28,16 +37,33 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
         auth = FirebaseAuth.getInstance()
+        FirebaseMessaging.getInstance().subscribeToTopic("blood_requests")
         setContent {
-
-            /**
-             * TODO: Tasks:
-             * 1. Implement MVVM architecture for the project (https://developer.android.com/topic/architecture)
-             * 2. ViewModels for Register, Profile, Dashboard
-             * 3. Dependency injection using Hilt (https://developer.android.com/training/dependency-injection)
-             */
-
+            RequestNotificationPermissionIfNeeded()
             BloodBankApp(auth.currentUser)
+        }
+    }
+}
+
+@Composable
+fun RequestNotificationPermissionIfNeeded() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val context = LocalContext.current
+        var asked by remember { mutableStateOf(false) }
+
+        val launcher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { _ -> }
+        )
+
+        LaunchedEffect(Unit) {
+            val granted = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted && !asked) {
+                asked = true
+                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
     }
 }

@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.blooddonation.domain.BloodRequest
 import com.example.blooddonation.feature.theme.ThemeSwitch
+import com.google.firebase.firestore.FirebaseFirestore
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,8 +57,19 @@ fun BloodRequestScreen(
     var selectedBloodGroup by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var userName by remember { mutableStateOf("Anonymous") }
     val context = LocalContext.current
     val requests by viewModel.requests.collectAsState()
+
+    // Load the current user's name
+    LaunchedEffect(currentUserId) {
+        FirebaseFirestore.getInstance().collection("users")
+            .document(currentUserId)
+            .get()
+            .addOnSuccessListener { doc ->
+                userName = doc.getString("username") ?: ""
+            }
+    }
 
     // Get the accepted request (if any) for this user
     val acceptedRequest = requests.find {
@@ -156,6 +169,8 @@ fun BloodRequestScreen(
                             val newRequest = BloodRequest(
                                 requesterId = currentUserId,
                                 bloodGroup = selectedBloodGroup,
+                                requesterName = userName,
+                                timestamp = System.currentTimeMillis(),
                                 location = location,
                                 status = "pending"
                             )

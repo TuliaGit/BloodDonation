@@ -33,7 +33,7 @@ class BloodRequestViewModel : ViewModel() {
             }
     }
 
-    fun loadRequests() {
+    private fun loadRequests() {
         db.collection("bloodRequests")
             .get()
             .addOnSuccessListener { result ->

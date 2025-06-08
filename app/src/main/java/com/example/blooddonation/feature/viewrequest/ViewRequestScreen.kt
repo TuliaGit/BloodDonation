@@ -1,4 +1,4 @@
-package com.example.blooddonation.feature.viewdonors
+package com.example.blooddonation.feature.viewrequest
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -55,10 +55,11 @@ import com.example.blooddonation.domain.BloodRequest
 import com.example.blooddonation.feature.requestblood.BloodRequestViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.blooddonation.feature.theme.ThemeSwitch
+import com.example.blooddonation.feature.theme.acceptedLabelYellow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ViewDonorsScreen(
+fun ViewRequestScreen(
     onNavigateToChat: (chatId: String, currentUserId: String, requesterId: String) -> Unit,
     onBack: () -> Unit,
     viewModel: BloodRequestViewModel = viewModel(),
@@ -70,10 +71,12 @@ fun ViewDonorsScreen(
 
     val tabTitles = listOf("Pending", "Accepted", "Rejected")
 
-    // --- Tab filtering logic ---
-    val pendingRequests = requests.filter { it.status == "pending" }
-    val acceptedRequests = requests.filter { it.status == "accepted" }
-    val rejectedRequests = requests.filter { it.status == "rejected" }
+    val pendingRequests =
+        requests.filter { it.status == "pending" }.sortedByDescending { it.timestamp }
+    val acceptedRequests =
+        requests.filter { it.status == "accepted" }.sortedByDescending { it.timestamp }
+    val rejectedRequests =
+        requests.filter { it.status == "rejected" }.sortedByDescending { it.timestamp }
 
     // Show medical dialog if needed
     showMedicalFormForRequest?.let { request ->
@@ -196,10 +199,11 @@ private fun AcceptedTab(
                     Column(Modifier.padding(16.dp)) {
                         Text("Blood Group: ${request.bloodGroup}", fontWeight = FontWeight.Bold)
                         Text("Location: ${request.location}")
+                        Text("Requester: ${request.requesterName ?: "Anonymous"}")
                         if (request.requesterId == currentUserId) {
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                text = "Raised by you",
+                                text = "Raised by me",
                                 color = MaterialTheme.colorScheme.tertiaryContainer,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
@@ -209,21 +213,41 @@ private fun AcceptedTab(
                                     )
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                             )
-                        }
-                        if (!request.chatId.isNullOrEmpty() && request.requesterId != currentUserId) {
+                        } else if (request.acceptedBy == currentUserId) {
                             Spacer(Modifier.height(8.dp))
-                            Button(
-                                onClick = {
-                                    onNavigateToChat(
-                                        request.chatId,
-                                        currentUserId,
-                                        request.requesterId
+                            Text(
+                                text = "Accepted by me",
+                                color = acceptedLabelYellow,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .background(
+                                        color = acceptedLabelYellow.copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(8.dp)
                                     )
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
-                            ) {
-                                Text("Go to Chat", color = MaterialTheme.colorScheme.onTertiaryContainer)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                        if (!request.chatId.isNullOrEmpty()) {
+                            val otherUserId = if (request.requesterId == currentUserId) {
+                                request.acceptedBy
+                            } else {
+                                request.requesterId
+                            }
+                            if (!otherUserId.isNullOrEmpty()) {
+                                Spacer(Modifier.height(8.dp))
+                                Button(
+                                    onClick = {
+                                        onNavigateToChat(
+                                            request.chatId,
+                                            currentUserId,
+                                            otherUserId
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+                                ) {
+                                    Text("Go to Chat", color = MaterialTheme.colorScheme.onTertiaryContainer)
+                                }
                             }
                         }
                     }
@@ -251,10 +275,11 @@ private fun RejectedTab(requests: List<BloodRequest>, currentUserId: String) {
                     Column(Modifier.padding(16.dp)) {
                         Text("Blood Group: ${request.bloodGroup}", fontWeight = FontWeight.Bold)
                         Text("Location: ${request.location}")
+                        Text("Requester: ${request.requesterName ?: "Anonymous"}")
                         if (request.requesterId == currentUserId) {
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                text = "Raised by you",
+                                text = "Raised by me",
                                 color = MaterialTheme.colorScheme.tertiaryContainer,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
@@ -294,11 +319,12 @@ fun RequestCard(
                 style = MaterialTheme.typography.titleMedium
             )
             Text(text = "Location: ${bloodRequest.location}")
+            Text("Requester: ${bloodRequest.requesterName ?: "Anonymous"}")
 
             if (isRaisedByMe) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Raised by you",
+                    text = "Raised by me",
                     color = MaterialTheme.colorScheme.tertiaryContainer,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier

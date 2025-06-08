@@ -63,3 +63,6 @@ val md_theme_dark_surface             = Color(0xFF232024)
 val md_theme_dark_onSurface           = Color(0xFFFFCDD2)
 
 val md_theme_dark_outline             = Color(0xFF8D8D8D)
+
+// Custom extras
+val acceptedLabelYellow = Color(0xFFC09411) // Yellow 300 for "Accepted by me" label
