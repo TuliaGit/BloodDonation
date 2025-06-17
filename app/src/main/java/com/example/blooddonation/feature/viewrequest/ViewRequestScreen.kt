@@ -1,5 +1,6 @@
 package com.example.blooddonation.feature.viewrequest
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -371,6 +373,7 @@ fun MedicalFormDialog(
             tonalElevation = 4.dp,
             modifier = Modifier.wrapContentHeight()
         ) {
+            val context = LocalContext.current
             val scrollState = rememberScrollState()
             var age by remember { mutableStateOf("") }
             var weight by remember { mutableStateOf("") }
@@ -464,19 +467,32 @@ fun MedicalFormDialog(
                             surgery, alcohol, chronicDiseases, exposedCovid
                         ).all { it.isNotBlank() },
                         onClick = {
-                            // pack answers into a single string; adjust as you like
-                            val info = buildString {
-                                append("age=$age; ")
-                                append("weight=$weight; ")
-                                append("illness=$hadIllness; ")
-                                append("medications=$medications; ")
-                                append("surgery=$surgery; ")
-                                append("alcohol=$alcohol; ")
-                                append("chronicDiseases=$chronicDiseases; ")
-                                append("exposedCovid=$exposedCovid")
+                            if (
+                                exposedCovid.equals("Yes", ignoreCase = true) &&
+                                chronicDiseases.equals("Yes", ignoreCase = true) &&
+                                alcohol.equals("Yes", ignoreCase = true)
+                            ) {
+                                Toast.makeText(
+                                    context,
+                                    "You are not eligible to donate blood based on your responses.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                onDismiss() // just close dialog, do not accept or reject
+                            } else {
+                                val info = buildString {
+                                    append("age=$age; ")
+                                    append("weight=$weight; ")
+                                    append("illness=$hadIllness; ")
+                                    append("medications=$medications; ")
+                                    append("surgery=$surgery; ")
+                                    append("alcohol=$alcohol; ")
+                                    append("chronicDiseases=$chronicDiseases; ")
+                                    append("exposedCovid=$exposedCovid")
+                                }
+                                onSubmit(request.id, donorId, info)
                             }
-                            onSubmit(request.id, donorId, info)
                         }
+
                     ) { Text("Submit") }
                 }
             }
